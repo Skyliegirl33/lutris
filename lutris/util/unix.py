@@ -82,7 +82,7 @@ SYSTEM_COMPONENTS = {
     },
 }
 
-class UnixSystem:
+class UnixSystem:  # pylint: disable=too-many-public-methods
     """Global cache for system commands"""
 
     _cache = {}
@@ -129,17 +129,14 @@ class UnixSystem:
 
     @staticmethod
     def get_cpus():
-        """Parse the output of /proc/cpuinfo"""
         pass
 
     @staticmethod
     def get_drives():
-        """Return a list of drives with their filesystems"""
         pass
 
     @staticmethod
     def get_ram_info():
-        """Parse the output of /proc/meminfo and return RAM information in kB"""
         pass
 
     @staticmethod
@@ -165,11 +162,7 @@ class UnixSystem:
 
     @staticmethod
     def get_kernel_version():
-        """Get kernel info from /proc/version"""
-        with open("/proc/version", encoding='utf-8') as kernel_info:
-            info = kernel_info.readlines()[0]
-            version = info.split(" ")[2]
-        return version
+        pass
 
     def gamemode_available(self):
         """Return whether gamemode is available"""
@@ -437,7 +430,7 @@ class BSDSystem(UnixSystem):
         out = [line.strip("\t").split(":-", 1)[1] for line in output if line.startswith("\t") and not "search directories:" in line]
         return out
 
-class LinuxSystem(UnixSystem):  # pylint: disable=too-many-public-methods
+class LinuxSystem(UnixSystem):
     multiarch_lib_folders = [
         ("/lib", "/lib64"),
         ("/lib32", "/lib64"),
