@@ -18,6 +18,7 @@ WINE_PATHS = {
     "winehq-devel": "/opt/wine-devel/bin/wine",
     "winehq-staging": "/opt/wine-staging/bin/wine",
     "wine-development": "/usr/lib/wine-development/wine",
+    "wine-proton": "/usr/local/wine-proton/bin/wine",
     "system": "wine",
 }
 
