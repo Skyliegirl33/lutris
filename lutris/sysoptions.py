@@ -6,7 +6,7 @@ from collections import OrderedDict, defaultdict
 from gettext import gettext as _
 
 from lutris import runners
-from lutris.util import linux, system
+from lutris.util import unix, system
 from lutris.util.display import DISPLAY_MANAGER, SCREEN_SAVER_INHIBITOR, USE_DRI_PRIME
 
 VULKAN_DATA_DIRS = [
@@ -183,7 +183,7 @@ system_options = [  # pylint: disable=invalid-name
         "label": _("Enable gamescope"),
         "default": False,
         "advanced": True,
-        "condition": bool(system.find_executable("gamescope")) and linux.LINUX_SYSTEM.nvidia_gamescope_support(),
+        "condition": bool(system.find_executable("gamescope")) and unix.UNIX_SYSTEM.nvidia_gamescope_support(),
         "help": _("Use gamescope to draw the game window isolated from your desktop.\n"
                   "Use Ctrl+Super+F to toggle fullscreen"),
     },
@@ -323,8 +323,8 @@ system_options = [  # pylint: disable=invalid-name
     {
         "option": "gamemode",
         "type": "bool",
-        "default": linux.LINUX_SYSTEM.gamemode_available(),
-        "condition": linux.LINUX_SYSTEM.gamemode_available(),
+        "default": unix.UNIX_SYSTEM.gamemode_available(),
+        "condition": unix.UNIX_SYSTEM.gamemode_available(),
         "label": _("Enable Feral GameMode"),
         "help": _("Request a set of optimisations be temporarily applied to the host OS"),
     },
@@ -368,7 +368,7 @@ system_options = [  # pylint: disable=invalid-name
         "type": "choice",
         "label": _("Turn off monitors except"),
         "choices": get_output_choices,
-        "condition": linux.LINUX_SYSTEM.display_server != "wayland",
+        "condition": unix.UNIX_SYSTEM.display_server != "wayland",
         "default": "off",
         "advanced": True,
         "help": _("Only keep the selected screen active while the game is "
@@ -381,7 +381,7 @@ system_options = [  # pylint: disable=invalid-name
         "type": "choice",
         "label": _("Switch resolution to"),
         "choices": get_resolution_choices,
-        "condition": linux.LINUX_SYSTEM.display_server != "wayland",
+        "condition": unix.UNIX_SYSTEM.display_server != "wayland",
         "default": "off",
         "help": _("Switch to this screen resolution while the game is running."),
     },
@@ -398,8 +398,8 @@ system_options = [  # pylint: disable=invalid-name
         "option": "terminal_app",
         "label": _("Text based games emulator"),
         "type": "choice_with_entry",
-        "choices": linux.get_terminal_apps,
-        "default": linux.get_default_terminal(),
+        "choices": unix.get_terminal_apps,
+        "default": unix.get_default_terminal(),
         "advanced": True,
         "help": _("The terminal emulator used with the CLI mode. "
                   "Choose from the list of detected terminal apps or enter "

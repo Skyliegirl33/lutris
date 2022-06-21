@@ -15,7 +15,7 @@ from lutris.runners import RunnerInstallationError
 from lutris.util import system
 from lutris.util.extract import ExtractFailure, extract_archive
 from lutris.util.http import HTTPError, Request
-from lutris.util.linux import LINUX_SYSTEM
+from lutris.util.unix import UNIX_SYSTEM
 from lutris.util.log import logger
 
 
@@ -239,9 +239,9 @@ class Runner:  # pylint: disable=too-many-public-methods
         then the game won't start."""
         available_libs = set()
         for lib in set(self.require_libs):
-            if lib in LINUX_SYSTEM.shared_libraries:
+            if lib in UNIX_SYSTEM.shared_libraries:
                 if self.arch:
-                    if self.arch in [_lib.arch for _lib in LINUX_SYSTEM.shared_libraries[lib]]:
+                    if self.arch in [_lib.arch for _lib in UNIX_SYSTEM.shared_libraries[lib]]:
                         available_libs.add(lib)
                 else:
                     available_libs.add(lib)
@@ -345,7 +345,7 @@ class Runner:  # pylint: disable=too-many-public-methods
             return
 
         versions = runner_info.get("versions") or []
-        arch = LINUX_SYSTEM.arch
+        arch = UNIX_SYSTEM.arch
         if version:
             if version.endswith("-i386") or version.endswith("-x86_64"):
                 version, arch = version.rsplit("-", 1)
@@ -358,9 +358,9 @@ class Runner:  # pylint: disable=too-many-public-methods
             default_version = [v for v in versions_for_arch if v["default"] is True]
             if default_version:
                 return default_version[0]
-        elif len(versions) == 1 and LINUX_SYSTEM.is_64_bit:
+        elif len(versions) == 1 and UNIX_SYSTEM.is_64_bit:
             return versions[0]
-        elif len(versions) > 1 and LINUX_SYSTEM.is_64_bit:
+        elif len(versions) > 1 and UNIX_SYSTEM.is_64_bit:
             default_version = [v for v in versions if v["default"] is True]
             if default_version:
                 return default_version[0]

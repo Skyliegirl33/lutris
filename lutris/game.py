@@ -22,13 +22,13 @@ from lutris.exceptions import GameConfigError, watch_lutris_errors
 from lutris.gui import dialogs
 from lutris.runner_interpreter import export_bash_script, get_launch_parameters
 from lutris.runners import InvalidRunner, import_runner, wine
-from lutris.util import audio, extract, jobs, linux, strings, system, xdgshortcuts
+from lutris.util import audio, extract, jobs, unix, strings, system, xdgshortcuts
 from lutris.util.display import (
     DISPLAY_MANAGER, SCREEN_SAVER_INHIBITOR, disable_compositing, enable_compositing, restore_gamma
 )
 from lutris.util.graphics.xephyr import get_xephyr_command
 from lutris.util.graphics.xrandr import turn_off_except
-from lutris.util.linux import LINUX_SYSTEM
+from lutris.util.unix import UNIX_SYSTEM
 from lutris.util.log import LOG_BUFFERS, logger
 from lutris.util.process import Process
 from lutris.util.timer import Timer
@@ -307,7 +307,7 @@ class Game(GObject.Object):
             runtime_updater = runtime.RuntimeUpdater()
             if runtime_updater.is_updating():
                 dialogs.ErrorDialog(_("Runtime currently updating"), _("Game might not work as expected"))
-        if ("wine" in self.runner_name and not wine.get_wine_version() and not LINUX_SYSTEM.is_flatpak):
+        if ("wine" in self.runner_name and not wine.get_wine_version() and not UNIX_SYSTEM.is_flatpak):
             dialogs.WineNotInstalledWarning(parent=None)
         return True
 
@@ -393,7 +393,7 @@ class Game(GObject.Object):
         Remember that only games using text mode should use the terminal.
         """
         if self.runner.system_config.get("terminal"):
-            terminal = self.runner.system_config.get("terminal_app", linux.get_default_terminal())
+            terminal = self.runner.system_config.get("terminal_app", unix.get_default_terminal())
             if terminal and not system.find_executable(terminal):
                 raise GameConfigError(_("The selected terminal application could not be launched:\n%s") % terminal)
             return terminal

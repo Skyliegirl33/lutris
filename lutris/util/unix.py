@@ -1,4 +1,4 @@
-"""Linux specific platform code"""
+"""Unix specific platform code"""
 import json
 import os
 import platform
@@ -555,8 +555,8 @@ class SharedLibrary:
         return "%s (%s)" % (self.name, self.arch)
 
 UNIX_SYSTEM = UnixSystem()
-LINUX_SYSTEM = LinuxSystem()
-BSD_SYSTEM = BSDSystem()
+#LINUX_SYSTEM = LinuxSystem()
+#BSD_SYSTEM = BSDSystem()
 
 def gather_system_info():
     """Get all system information in a single data structure"""
@@ -567,12 +567,12 @@ def gather_system_info():
     system_info["gpus"] = [drivers.get_gpu_info(gpu) for gpu in drivers.get_gpus()]
     system_info["env"] = dict(os.environ)
     system_info["missing_libs"] = UNIX_SYSTEM.get_missing_libs()
-    system_info["cpus"] = LINUX_SYSTEM.get_cpus()
-    system_info["drives"] = LINUX_SYSTEM.get_drives()
-    system_info["ram"] = LINUX_SYSTEM.get_ram_info()
-    system_info["dist"] = LINUX_SYSTEM.get_dist_info()
-    system_info["arch"] = LINUX_SYSTEM.get_arch()
-    system_info["kernel"] = LINUX_SYSTEM.get_kernel_version()
+    system_info["cpus"] = UNIX_SYSTEM.get_cpus()
+    system_info["drives"] = UNIX_SYSTEM.get_drives()
+    system_info["ram"] = UNIX_SYSTEM.get_ram_info()
+    system_info["dist"] = UNIX_SYSTEM.get_dist_info()
+    system_info["arch"] = UNIX_SYSTEM.get_arch()
+    system_info["kernel"] = UNIX_SYSTEM.get_kernel_version()
     system_info["glxinfo"] = glxinfo.GlxInfo().as_dict()
     return system_info
 
@@ -603,7 +603,7 @@ def gather_system_info_str():
     system_info_readable["Memory"] = ram_dict
     # Add graphics information
     graphics_dict = {}
-    if LINUX_SYSTEM.glxinfo:
+    if UNIX_SYSTEM.glxinfo:
         graphics_dict["Vendor"] = system_info["glxinfo"].get("opengl_vendor", "Vendor unavailable")
         graphics_dict["OpenGL Renderer"] = system_info["glxinfo"].get("opengl_renderer", "OpenGL Renderer unavailable")
         graphics_dict["OpenGL Version"] = system_info["glxinfo"].get("opengl_version", "OpenGL Version unavailable")

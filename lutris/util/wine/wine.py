@@ -7,13 +7,13 @@ from gettext import gettext as _
 from lutris import runtime, settings
 from lutris.gui.dialogs import DontShowAgainDialog, ErrorDialog
 from lutris.runners.steam import steam
-from lutris.util import linux, system
+from lutris.util import unix, system
 from lutris.util.log import logger
 from lutris.util.strings import version_sort
 from lutris.util.wine import fsync
 
 WINE_DIR = os.path.join(settings.RUNNER_DIR, "wine")
-WINE_DEFAULT_ARCH = "win64" if linux.LINUX_SYSTEM.is_64_bit else "win32"
+WINE_DEFAULT_ARCH = "win64" if unix.UNIX_SYSTEM.is_64_bit else "win32"
 WINE_PATHS = {
     "winehq-devel": "/opt/wine-devel/bin/wine",
     "winehq-staging": "/opt/wine-staging/bin/wine",
@@ -229,7 +229,7 @@ def is_esync_limit_set():
     if ESYNC_LIMIT_CHECK in ("0", "off"):
         logger.info("fd limit check for esync was manually disabled")
         return True
-    return linux.LINUX_SYSTEM.has_enough_file_descriptors()
+    return unix.UNIX_SYSTEM.has_enough_file_descriptors()
 
 
 def is_fsync_supported():

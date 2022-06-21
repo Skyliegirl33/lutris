@@ -10,7 +10,7 @@ from gi.repository import Gtk
 # Lutris Modules
 from lutris.gui.dialogs import NoticeDialog
 from lutris.gui.widgets.window import BaseApplicationWindow
-from lutris.util.linux import gather_system_info
+from lutris.util.unix import gather_system_info
 
 
 class IssueReportWindow(BaseApplicationWindow):

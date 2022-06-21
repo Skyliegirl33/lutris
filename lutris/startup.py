@@ -15,7 +15,7 @@ from lutris.services import DEFAULT_SERVICES
 from lutris.services.lutris import sync_media
 from lutris.util import update_cache
 from lutris.util.graphics import drivers, vkquery
-from lutris.util.linux import LINUX_SYSTEM
+from lutris.util.unix import UNIX_SYSTEM
 from lutris.util.log import logger
 from lutris.util.steam.shortcut import update_all_artwork
 from lutris.util.system import create_folder
@@ -60,14 +60,14 @@ def check_driver():
         for gpu_id in gpus:
             gpu_info = drivers.get_nvidia_gpu_info(gpu_id)
             logger.info("GPU: %s", gpu_info.get("Model"))
-    elif LINUX_SYSTEM.glxinfo:
+    elif UNIX_SYSTEM.glxinfo:
         # pylint: disable=no-member
-        if hasattr(LINUX_SYSTEM.glxinfo, "GLX_MESA_query_renderer"):
+        if hasattr(UNIX_SYSTEM.glxinfo, "GLX_MESA_query_renderer"):
             logger.info(
                 "Running %s Mesa driver %s on %s",
-                LINUX_SYSTEM.glxinfo.opengl_vendor,
-                LINUX_SYSTEM.glxinfo.GLX_MESA_query_renderer.version,
-                LINUX_SYSTEM.glxinfo.GLX_MESA_query_renderer.device,
+                UNIX_SYSTEM.glxinfo.opengl_vendor,
+                UNIX_SYSTEM.glxinfo.GLX_MESA_query_renderer.version,
+                UNIX_SYSTEM.glxinfo.GLX_MESA_query_renderer.device,
             )
     else:
         logger.warning("glxinfo is not available on your system, unable to detect driver version")
@@ -99,14 +99,14 @@ def check_driver():
 
 def check_libs(all_components=False):
     """Checks that required libraries are installed on the system"""
-    missing_libs = LINUX_SYSTEM.get_missing_libs()
+    missing_libs = UNIX_SYSTEM.get_missing_libs()
     if all_components:
-        components = LINUX_SYSTEM.requirements
+        components = UNIX_SYSTEM.requirements
     else:
-        components = LINUX_SYSTEM.critical_requirements
+        components = UNIX_SYSTEM.critical_requirements
     missing_vulkan_libs = []
     for req in components:
-        for index, arch in enumerate(LINUX_SYSTEM.runtime_architectures):
+        for index, arch in enumerate(UNIX_SYSTEM.runtime_architectures):
             for lib in missing_libs[req][index]:
                 if req == "VULKAN":
                     missing_vulkan_libs.append(arch)
@@ -130,6 +130,14 @@ def check_libs(all_components=False):
                 )
             )
 
+def check_os():
+    """Instantiates the correct singleton based on the reported OS"""
+    output = system.read_process_output(["uname", "-o"])
+
+    if "Linux" in output:
+        UNIX_SYSTEM = LinuxSystem()
+    elif "FreeBSD" in output:
+        UNIX_SYSTEM = BSDSystem()
 
 def check_vulkan():
     """Reports if Vulkan is enabled on the system"""
@@ -154,6 +162,7 @@ def fill_missing_platforms():
 
 def run_all_checks():
     """Run all startup checks"""
+    check_os()
     check_driver()
     check_libs()
     check_vulkan()

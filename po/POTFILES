@@ -183,7 +183,7 @@ lutris/util/__init__.py
 lutris/util/jobs.py
 lutris/util/joypad.py
 lutris/util/libretro.py
-lutris/util/linux.py
+lutris/util/unix.py
 lutris/util/log.py
 lutris/util/magic.py
 lutris/util/mame/database.py

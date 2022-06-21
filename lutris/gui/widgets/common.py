@@ -9,7 +9,7 @@ from gi.repository import GObject, Gtk, Pango
 # Lutris Modules
 from lutris.gui.widgets.utils import get_stock_icon
 from lutris.util import system
-from lutris.util.linux import LINUX_SYSTEM
+from lutris.util.unix import UNIX_SYSTEM
 from lutris.util.log import logger
 
 
@@ -126,7 +126,7 @@ class FileChooserEntry(Gtk.Box):
         path = os.path.expanduser(path)
         self.update_completion(path)
         self.path = path
-        if self.warn_if_ntfs and LINUX_SYSTEM.get_fs_type_for_path(path) == "ntfs":
+        if self.warn_if_ntfs and UNIX_SYSTEM.get_fs_type_for_path(path) == "ntfs":
             ntfs_box = Gtk.Box(spacing=6, visible=True)
             warning_image = Gtk.Image(visible=True)
             warning_image.set_from_pixbuf(get_stock_icon("dialog-warning", 32))

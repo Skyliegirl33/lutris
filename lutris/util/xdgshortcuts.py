@@ -8,12 +8,12 @@ from gi.repository import GLib
 
 from lutris.settings import CACHE_DIR
 from lutris.util import system
-from lutris.util.linux import LINUX_SYSTEM
+from lutris.util.unix import UNIX_SYSTEM
 from lutris.util.log import logger
 
 
 def get_lutris_executable():
-    if LINUX_SYSTEM.is_flatpak:
+    if UNIX_SYSTEM.is_flatpak:
         return "flatpak run net.lutris.Lutris"
     return "lutris"
 

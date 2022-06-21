@@ -1,4 +1,4 @@
-from lutris.util import linux
+from lutris.util import unix
 from lutris.util.log import logger
 
 
@@ -10,7 +10,7 @@ def get_game_launcher(script):
     """
     key = None
     launcher_value = None
-    exe = "exe64" if "exe64" in script and linux.LINUX_SYSTEM.is_64_bit else "exe"
+    exe = "exe64" if "exe64" in script and unix.UNIX_SYSTEM.is_64_bit else "exe"
     if exe == "exe64":
         logger.warning("Stop using exe64, use launch configs to add support for 32 bit. Please update the script.")
     for launcher in (exe, "iso", "rom", "disk", "main_file"):

@@ -9,7 +9,7 @@ from lutris import settings
 from lutris.util import http, jobs, system
 from lutris.util.downloader import Downloader
 from lutris.util.extract import extract_archive
-from lutris.util.linux import LINUX_SYSTEM
+from lutris.util.unix import UNIX_SYSTEM
 from lutris.util.log import logger
 
 RUNTIME_DISABLED = os.environ.get("LUTRIS_RUNTIME", "").lower() in ("0", "off")
@@ -220,7 +220,7 @@ class RuntimeUpdater:
 
             # Skip 32bit runtimes on 64 bit systems except the main runtime
             if (
-                runtime["architecture"] == "i386" and LINUX_SYSTEM.is_64_bit
+                runtime["architecture"] == "i386" and UNIX_SYSTEM.is_64_bit
                 and not runtime["name"].startswith(("Ubuntu", "lib32"))
             ):
                 logger.debug(
@@ -231,7 +231,7 @@ class RuntimeUpdater:
                 continue
 
             # Skip 64bit runtimes on 32 bit systems
-            if runtime["architecture"] == "x86_64" and not LINUX_SYSTEM.is_64_bit:
+            if runtime["architecture"] == "x86_64" and not UNIX_SYSTEM.is_64_bit:
                 logger.debug(
                     "Skipping runtime %s for %s",
                     runtime["name"],
@@ -293,7 +293,7 @@ def get_runtime_paths(version=None, prefer_system_libs=True, wine_path=None):
         "steam/i386/usr/lib",
     ]
 
-    if LINUX_SYSTEM.is_64_bit:
+    if UNIX_SYSTEM.is_64_bit:
         lutris_runtime_path = "%s-x86_64" % version
         runtime_paths += [
             lutris_runtime_path,
@@ -307,7 +307,7 @@ def get_runtime_paths(version=None, prefer_system_libs=True, wine_path=None):
     if prefer_system_libs:
         if wine_path:
             paths += get_winelib_paths(wine_path)
-        paths += list(LINUX_SYSTEM.iter_lib_folders())
+        paths += list(UNIX_SYSTEM.iter_lib_folders())
     # Then resolve absolute paths for the runtime
     paths += [os.path.join(settings.RUNTIME_DIR, path) for path in runtime_paths]
     return paths

@@ -17,7 +17,7 @@ from lutris.database.games import get_game_by_field
 from lutris.game import Game
 from lutris.installer.errors import ScriptingError
 from lutris.runners import import_task
-from lutris.util import extract, linux, selective_merge, system
+from lutris.util import extract, unix, selective_merge, system
 from lutris.util.fileio import EvilConfigParser, MultiOrderedDict
 from lutris.util.log import logger
 from lutris.util.wine.wine import WINE_DEFAULT_ARCH, get_wine_version_exe
@@ -152,7 +152,7 @@ class CommandsMixin:
             raise ScriptingError(_("Unable to find executable %s") % exec_path)
 
         if terminal:
-            terminal = linux.get_default_terminal()
+            terminal = unix.get_default_terminal()
 
         if not working_dir or not os.path.exists(working_dir):
             working_dir = self.target_path

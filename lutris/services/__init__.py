@@ -18,7 +18,7 @@ from lutris.services.ubisoft import UbisoftConnectService
 from lutris.services.xdg import XDGService
 from lutris.util import system
 from lutris.util.dolphin.cache_reader import DOLPHIN_GAME_CACHE_FILE
-from lutris.util.linux import LINUX_SYSTEM
+from lutris.util.unix import UNIX_SYSTEM
 
 DEFAULT_SERVICES = ["lutris", "gog", "egs", "origin", "ubisoft", "steam"]
 
@@ -33,9 +33,9 @@ def get_services():
         "origin": OriginService,
         "ubisoft": UbisoftConnectService,
     }
-    if not LINUX_SYSTEM.is_flatpak:
+    if not UNIX_SYSTEM.is_flatpak:
         _services["xdg"] = XDGService
-    if LINUX_SYSTEM.has_steam:
+    if UNIX_SYSTEM.has_steam:
         _services["steam"] = SteamService
     _services["steamwindows"] = SteamWindowsService
     if system.path_exists(DOLPHIN_GAME_CACHE_FILE):

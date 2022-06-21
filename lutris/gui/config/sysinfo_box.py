@@ -3,7 +3,7 @@ from gettext import gettext as _
 from gi.repository import Gdk, Gtk
 
 from lutris.gui.widgets.log_text_view import LogTextView
-from lutris.util.linux import gather_system_info_str
+from lutris.util.unix import gather_system_info_str
 
 
 class SysInfoBox(Gtk.Fixed):

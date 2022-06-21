@@ -4,7 +4,7 @@ import shlex
 import stat
 
 from lutris.util import system
-from lutris.util.linux import LINUX_SYSTEM
+from lutris.util.unix import UNIX_SYSTEM
 from lutris.util.log import logger
 
 
@@ -92,7 +92,7 @@ def get_launch_parameters(runner, gameplay_info):
             game_ld_library_path, ld_library_path]))
 
     # Feral gamemode
-    gamemode = system_config.get("gamemode") and LINUX_SYSTEM.gamemode_available()
+    gamemode = system_config.get("gamemode") and UNIX_SYSTEM.gamemode_available()
     if gamemode:
         launch_arguments.insert(0, "gamemoderun")
 

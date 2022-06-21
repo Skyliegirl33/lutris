@@ -4,7 +4,7 @@ import subprocess
 from collections import namedtuple
 
 from lutris.settings import DEFAULT_RESOLUTION_HEIGHT, DEFAULT_RESOLUTION_WIDTH
-from lutris.util.linux import LINUX_SYSTEM
+from lutris.util.unix import UNIX_SYSTEM
 from lutris.util.log import logger, logging
 from lutris.util.system import read_process_output
 
@@ -14,13 +14,13 @@ Output = namedtuple("Output", ("name", "mode", "position", "rotation", "primary"
 def _get_vidmodes():
     """Return video modes from XrandR"""
     logger.debug("Retrieving video modes from XrandR")
-    return read_process_output([LINUX_SYSTEM.get("xrandr")]).split("\n")
+    return read_process_output([UNIX_SYSTEM.get("xrandr")]).split("\n")
 
 
 def _log_vidmodes(message):
     """Write the xrandr output to the log for debugging purposes"""
     if logger.isEnabledFor(logging.DEBUG):
-        xrandr_output = read_process_output([LINUX_SYSTEM.get("xrandr")])
+        xrandr_output = read_process_output([UNIX_SYSTEM.get("xrandr")])
         logger.debug("%s\n%s", message, xrandr_output)
 
 
@@ -85,7 +85,7 @@ def turn_off_except(display):
     for output in get_outputs():
         if output.name != display:
             logger.info("Turning off %s", output[0])
-            with subprocess.Popen([LINUX_SYSTEM.get("xrandr"), "--output", output.name, "--off"]) as xrandr:
+            with subprocess.Popen([UNIX_SYSTEM.get("xrandr"), "--output", output.name, "--off"]) as xrandr:
                 xrandr.communicate()
 
 
@@ -119,7 +119,7 @@ def change_resolution(resolution):
             logger.warning("Resolution %s doesn't exist.", resolution)
         else:
             logger.info("Changing resolution to %s", resolution)
-            with subprocess.Popen([LINUX_SYSTEM.get("xrandr"), "-s", resolution]) as xrandr:
+            with subprocess.Popen([UNIX_SYSTEM.get("xrandr"), "-s", resolution]) as xrandr:
                 xrandr.communicate()
 
     else:
@@ -138,7 +138,7 @@ def change_resolution(resolution):
             logger.info("Switching resolution of %s to %s", display.name, display.mode)
             with subprocess.Popen(
                 [
-                    LINUX_SYSTEM.get("xrandr"),
+                    UNIX_SYSTEM.get("xrandr"),
                     "--output",
                     display.name,
                     "--mode",
