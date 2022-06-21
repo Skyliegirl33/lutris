@@ -82,25 +82,14 @@ SYSTEM_COMPONENTS = {
     },
 }
 
-
-class LinuxSystem:  # pylint: disable=too-many-public-methods
+class UnixSystem:
     """Global cache for system commands"""
 
     _cache = {}
 
-    multiarch_lib_folders = [
-        ("/lib", "/lib64"),
-        ("/lib32", "/lib64"),
-        ("/usr/lib", "/usr/lib64"),
-        ("/usr/lib32", "/usr/lib64"),
-        ("/lib/i386-linux-gnu", "/lib/x86_64-linux-gnu"),
-        ("/usr/lib/i386-linux-gnu", "/usr/lib/x86_64-linux-gnu"),
-    ]
+    multiarch_lib_folders = []
 
-    soundfont_folders = [
-        "/usr/share/sounds/sf2",
-        "/usr/share/soundfonts",
-    ]
+    soundfont_folders = []
 
     recommended_no_file_open = 524288
     required_components = ["OPENGL", "VULKAN", "GNUTLS"]
@@ -119,9 +108,6 @@ class LinuxSystem:  # pylint: disable=too-many-public-methods
         # Detect if system is 64bit capable
         self.is_64_bit = sys.maxsize > 2**32
         self.arch = self.get_arch()
-        self.shared_libraries = self.get_shared_libraries()
-        self.populate_libraries()
-        self.populate_sound_fonts()
         self.soft_limit, self.hard_limit = self.get_file_limits()
         self.glxinfo = self.get_glxinfo()
 
@@ -144,37 +130,17 @@ class LinuxSystem:  # pylint: disable=too-many-public-methods
     @staticmethod
     def get_cpus():
         """Parse the output of /proc/cpuinfo"""
-        cpus = [{}]
-        cpu_index = 0
-        with open("/proc/cpuinfo", encoding='utf-8') as cpuinfo:
-            for line in cpuinfo.readlines():
-                if not line.strip():
-                    cpu_index += 1
-                    cpus.append({})
-                    continue
-                key, value = line.split(":", 1)
-                cpus[cpu_index][key.strip()] = value.strip()
-        return [cpu for cpu in cpus if cpu]
+        pass
 
     @staticmethod
     def get_drives():
         """Return a list of drives with their filesystems"""
-        lsblk_output = system.read_process_output(["lsblk", "-f", "--json"])
-        return [
-            drive
-            for drive in json.loads(lsblk_output)["blockdevices"]
-            if drive["fstype"] != "squashfs"
-        ]
+        pass
 
     @staticmethod
     def get_ram_info():
         """Parse the output of /proc/meminfo and return RAM information in kB"""
-        mem = {}
-        with open("/proc/meminfo", encoding='utf-8') as meminfo:
-            for line in meminfo.readlines():
-                key, value = line.split(":", 1)
-                mem[key.strip()] = value.strip('kB \n')
-        return mem
+        pass
 
     @staticmethod
     def get_dist_info():
@@ -189,7 +155,7 @@ class LinuxSystem:  # pylint: disable=too-many-public-methods
         with the supported architectures from the Lutris API
         """
         machine = platform.machine()
-        if machine == "x86_64":
+        if machine == "x86_64" or machine == "amd64":
             return "x86_64"
         if machine in ("i386", "i686"):
             return "i386"
@@ -332,17 +298,16 @@ class LinuxSystem:  # pylint: disable=too-many-public-methods
         if not ldconfig:
             logger.error("Could not detect ldconfig on this system")
             return []
-        output = system.read_process_output([ldconfig, "-p"]).split("\n")
-        return [line.strip("\t") for line in output if line.startswith("\t")]
+        pass
 
-    def get_shared_libraries(self):
+    def get_shared_libraries(self, system):
         """Loads all available libraries on the system as SharedLibrary instances
         The libraries are stored in a defaultdict keyed by library name.
         """
         shared_libraries = defaultdict(list)
         for lib_line in self.get_ldconfig_libs():
             try:
-                lib = SharedLibrary.new_from_ldconfig(lib_line)
+                lib = SharedLibrary.new_from_ldconfig(lib_line, system)
             except ValueError:
                 logger.error("Invalid ldconfig line: %s", lib_line)
                 continue
@@ -383,11 +348,164 @@ class LinuxSystem:  # pylint: disable=too-many-public-methods
         """Return whether the system has the necessary libs to support a feature"""
         if feature == "ACO":
             try:
-                mesa_version = LINUX_SYSTEM.glxinfo.GLX_MESA_query_renderer.version
+                mesa_version = UNIX_SYSTEM.glxinfo.GLX_MESA_query_renderer.version
                 return mesa_version >= "19.3"
             except AttributeError:
                 return False
         return not self.get_missing_requirement_libs(feature)[0]
+
+class BSDSystem(UnixSystem):
+    multiarch_lib_folders = [
+        ("/lib", "/lib"),
+        ("/usr/local/lib", "/usr/local/lib"),
+        ("/usr/lib32", "/usr/lib")
+    ]
+
+    soundfont_folders = [
+        "/usr/local/share/sounds/sf2",
+        "/usr/local/share/soundfonts",
+    ]
+
+    def __init__(self):
+        super().__init__()
+        self.shared_libraries = self.get_shared_libraries("BSD")
+        self.populate_libraries()
+        self.populate_sound_fonts()
+
+    @staticmethod
+    def get_cpus():
+        """Parse the output of sysctl hw"""
+        ncpu = int(system.read_process_output(["sysctl", "hw.ncpu"]).split(":", 1)[1])
+        cpus = [{} for n in range(ncpu)]
+        output = system.read_process_output(["sysctl", "hw"])
+
+        for cpuinfo in output.split("\n"):
+            if cpuinfo.strip() == "":
+                continue
+
+            key, value = cpuinfo.split(": ", 1)
+
+            for cpu_index in range(ncpu):
+                cpus[cpu_index][key.strip()] = value.strip()
+
+        return [cpu for cpu in cpus if cpu]
+
+    @staticmethod
+    def get_drives():
+        """Return a list of drives with their filesystems"""
+        lsblk_output = system.read_process_output(["lsblk"])
+        obj = { "blockdevices": [] }
+        count = 0
+
+        for line in lsblk_output.split("\n")[1:]:
+            info = line.split()
+
+            if line.startswith("ada"):
+                obj["blockdevices"].append({ "name": info[0], "type": info[3], "children": [] })
+                count += 1
+
+            if line.startswith("  ") and info[0] != "<FREE>":
+                obj["blockdevices"][count - 1]["children"].append({ "name": info[0], "fstype": info[3], "label": info[4], "mount": info[5] })
+
+        return [
+            drive
+            for drive in obj["blockdevices"]
+            if drive["fstype"] != "squashfs"
+        ]
+
+    @staticmethod
+    def get_ram_info():
+        """Parse the output of sysctl and return RAM information in kB"""
+        mem = {}
+        meminfo = system.read_process_output(["sysctl", "hw.physmem", "hw.realmem", "hw.usermem"])
+        for line in meminfo.split("\n"):
+                key, value = line.split(":", 1)
+                mem[key.strip()] = round(int(value.strip('\n')) / 1024)
+        return mem
+
+    @staticmethod
+    def get_kernel_version():
+        """Get kernel info from uname"""
+        kernel_info = system.read_process_output(["uname", "-a"])
+        version = kernel_info.split(" ")[2]
+        return version
+
+    def get_ldconfig_libs(self):
+        """Return a list of available libraries, as returned by `ldconfig -r`."""
+        super().get_ldconfig_libs()
+        output = system.read_process_output(["ldconfig", "-r"]).split("\n")
+        out = [line.strip("\t").split(":-", 1)[1] for line in output if line.startswith("\t") and not "search directories:" in line]
+        return out
+
+class LinuxSystem(UnixSystem):  # pylint: disable=too-many-public-methods
+    multiarch_lib_folders = [
+        ("/lib", "/lib64"),
+        ("/lib32", "/lib64"),
+        ("/usr/lib", "/usr/lib64"),
+        ("/usr/lib32", "/usr/lib64"),
+        ("/lib/i386-linux-gnu", "/lib/x86_64-linux-gnu"),
+        ("/usr/lib/i386-linux-gnu", "/usr/lib/x86_64-linux-gnu"),
+    ]
+
+    soundfont_folders = [
+        "/usr/share/sounds/sf2",
+        "/usr/share/soundfonts",
+    ]
+
+    def __init__(self):
+        super().__init__()
+        self.shared_libraries = self.get_shared_libraries("Linux")
+        self.populate_libraries()
+        self.populate_sound_fonts()
+
+    @staticmethod
+    def get_cpus():
+        """Parse the output of /proc/cpuinfo"""
+        cpus = [{}]
+        cpu_index = 0
+        with open("/proc/cpuinfo", encoding='utf-8') as cpuinfo:
+            for line in cpuinfo.readlines():
+                if not line.strip():
+                    cpu_index += 1
+                    cpus.append({})
+                    continue
+                key, value = line.split(":", 1)
+                cpus[cpu_index][key.strip()] = value.strip()
+        return [cpu for cpu in cpus if cpu]
+
+    @staticmethod
+    def get_drives():
+        """Return a list of drives with their filesystems"""
+        lsblk_output = system.read_process_output(["lsblk", "-f", "--json"])
+        return [
+            drive
+            for drive in json.loads(lsblk_output)["blockdevices"]
+            if drive["fstype"] != "squashfs"
+        ]
+
+    @staticmethod
+    def get_ram_info():
+        """Parse the output of /proc/meminfo and return RAM information in kB"""
+        mem = {}
+        with open("/proc/meminfo", encoding='utf-8') as meminfo:
+            for line in meminfo.readlines():
+                key, value = line.split(":", 1)
+                mem[key.strip()] = value.strip('kB \n')
+        return mem
+
+    @staticmethod
+    def get_kernel_version():
+        """Get kernel info from /proc/version"""
+        with open("/proc/version", encoding='utf-8') as kernel_info:
+            info = kernel_info.readlines()[0]
+            version = info.split(" ")[2]
+        return version
+
+    def get_ldconfig_libs(self):
+        """Return a list of available libraries, as returned by `ldconfig -p`."""
+        super().get_ldconfig_libs()
+        output = system.read_process_output(["ldconfig", "-p"]).split("\n")
+        return [line.strip("\t") for line in output if line.startswith("\t")]
 
 
 class SharedLibrary:
@@ -401,12 +519,18 @@ class SharedLibrary:
         self.path = path
 
     @classmethod
-    def new_from_ldconfig(cls, ldconfig_line):
+    def new_from_ldconfig(cls, ldconfig_line, system):
         """Create a SharedLibrary instance from an output line from ldconfig"""
-        lib_match = re.match(r"^(.*) \((.*)\) => (.*)$", ldconfig_line)
+        if system == "Linux":
+            lib_match = re.match(r"^(.*) \((.*)\) => (.*)$", ldconfig_line)
+        else:
+            lib_match = re.match(r"^(.*) => (.*)$", ldconfig_line)
         if not lib_match:
             raise ValueError("Received incorrect value for ldconfig line: %s" % ldconfig_line)
-        return cls(lib_match.group(1), lib_match.group(2), lib_match.group(3))
+        if system == "Linux":
+            return cls(lib_match.group(1), lib_match.group(2), lib_match.group(3))
+        else:
+            return cls(lib_match.group(1), "", lib_match.group(2))
 
     @property
     def arch(self):
@@ -430,9 +554,9 @@ class SharedLibrary:
     def __str__(self):
         return "%s (%s)" % (self.name, self.arch)
 
-
+UNIX_SYSTEM = UnixSystem()
 LINUX_SYSTEM = LinuxSystem()
-
+BSD_SYSTEM = BSDSystem()
 
 def gather_system_info():
     """Get all system information in a single data structure"""
@@ -442,7 +566,7 @@ def gather_system_info():
         system_info["nvidia_gpus"] = [drivers.get_nvidia_gpu_info(gpu_id) for gpu_id in drivers.get_nvidia_gpu_ids()]
     system_info["gpus"] = [drivers.get_gpu_info(gpu) for gpu in drivers.get_gpus()]
     system_info["env"] = dict(os.environ)
-    system_info["missing_libs"] = LINUX_SYSTEM.get_missing_libs()
+    system_info["missing_libs"] = UNIX_SYSTEM.get_missing_libs()
     system_info["cpus"] = LINUX_SYSTEM.get_cpus()
     system_info["drives"] = LINUX_SYSTEM.get_drives()
     system_info["ram"] = LINUX_SYSTEM.get_ram_info()
@@ -508,7 +632,7 @@ def gather_system_info_str():
 
 def get_terminal_apps():
     """Return the list of installed terminal emulators"""
-    return LINUX_SYSTEM.get_terminals()
+    return UNIX_SYSTEM.get_terminals()
 
 
 def get_default_terminal():
