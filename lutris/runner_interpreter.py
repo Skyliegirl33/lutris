@@ -131,7 +131,7 @@ def export_bash_script(runner, gameplay_info, script_path):
     command, env = get_launch_parameters(runner, gameplay_info)
     # Override TERM otherwise the script might not run
     env["TERM"] = "xterm"
-    script_content = "#!/bin/bash\n\n\n"
+    script_content = "#!/usr/bin/env bash\n\n\n"
     script_content += "# Environment variables\n"
     for name, value in env.items():
         script_content += 'export %s="%s"\n' % (name, value)
