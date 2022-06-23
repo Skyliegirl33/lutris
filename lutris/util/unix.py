@@ -7,6 +7,7 @@ import resource
 import shutil
 import sys
 from collections import Counter, defaultdict
+from enum import Enum
 
 from lutris.util import system
 from lutris.util.graphics import drivers, glxinfo, vkquery
@@ -82,6 +83,8 @@ SYSTEM_COMPONENTS = {
     },
 }
 
+OSType = Enum("OSType", "Linux FreeBSD")
+
 class UnixSystem:  # pylint: disable=too-many-public-methods
     """Global cache for system commands"""
 
@@ -94,6 +97,8 @@ class UnixSystem:  # pylint: disable=too-many-public-methods
     recommended_no_file_open = 524288
     required_components = ["OPENGL", "VULKAN", "GNUTLS"]
     optional_components = ["WINE", "GAMEMODE"]
+
+    os_type = None
 
     def __init__(self):
         for key in ("COMMANDS", "TERMINALS"):
@@ -293,14 +298,14 @@ class UnixSystem:  # pylint: disable=too-many-public-methods
             return []
         pass
 
-    def get_shared_libraries(self, system):
+    def get_shared_libraries(self, os):
         """Loads all available libraries on the system as SharedLibrary instances
         The libraries are stored in a defaultdict keyed by library name.
         """
         shared_libraries = defaultdict(list)
         for lib_line in self.get_ldconfig_libs():
             try:
-                lib = SharedLibrary.new_from_ldconfig(lib_line, system)
+                lib = SharedLibrary.new_from_ldconfig(lib_line, os)
             except ValueError:
                 logger.error("Invalid ldconfig line: %s", lib_line)
                 continue
@@ -359,9 +364,11 @@ class BSDSystem(UnixSystem):
         "/usr/local/share/soundfonts",
     ]
 
+    os_type = OSType.FreeBSD
+
     def __init__(self):
         super().__init__()
-        self.shared_libraries = self.get_shared_libraries("BSD")
+        self.shared_libraries = self.get_shared_libraries(self.os_type)
         self.populate_libraries()
         self.populate_sound_fonts()
 
@@ -394,7 +401,7 @@ class BSDSystem(UnixSystem):
             info = line.split()
 
             if line.startswith("ada"):
-                obj["blockdevices"].append({ "name": info[0], "type": info[3], "children": [] })
+                obj["blockdevices"].append({ "name": info[0], "fstype": info[3], "children": [] })
                 count += 1
 
             if line.startswith("  ") and info[0] != "<FREE>":
@@ -426,8 +433,9 @@ class BSDSystem(UnixSystem):
     def get_ldconfig_libs(self):
         """Return a list of available libraries, as returned by `ldconfig -r`."""
         super().get_ldconfig_libs()
-        output = system.read_process_output(["ldconfig", "-r"]).split("\n")
-        out = [line.strip("\t").split(":-", 1)[1] for line in output if line.startswith("\t") and not "search directories:" in line]
+        output = system.read_process_output(["ldconfig", "-32 -r"]).split("\n")
+        out = ["lib" + line.strip("\t").split(":-l", 1)[1] for line in output if line.startswith("\t") and not "search directories:" in line]
+        print(out)
         return out
 
 class LinuxSystem(UnixSystem):
@@ -445,9 +453,11 @@ class LinuxSystem(UnixSystem):
         "/usr/share/soundfonts",
     ]
 
+    os_type = OSType.Linux
+
     def __init__(self):
         super().__init__()
-        self.shared_libraries = self.get_shared_libraries("Linux")
+        self.shared_libraries = self.get_shared_libraries(self.os_type)
         self.populate_libraries()
         self.populate_sound_fonts()
 
@@ -512,15 +522,15 @@ class SharedLibrary:
         self.path = path
 
     @classmethod
-    def new_from_ldconfig(cls, ldconfig_line, system):
+    def new_from_ldconfig(cls, ldconfig_line, os):
         """Create a SharedLibrary instance from an output line from ldconfig"""
-        if system == "Linux":
+        if os == OSType.Linux:
             lib_match = re.match(r"^(.*) \((.*)\) => (.*)$", ldconfig_line)
         else:
             lib_match = re.match(r"^(.*) => (.*)$", ldconfig_line)
         if not lib_match:
             raise ValueError("Received incorrect value for ldconfig line: %s" % ldconfig_line)
-        if system == "Linux":
+        if os == OSType.Linux:
             return cls(lib_match.group(1), lib_match.group(2), lib_match.group(3))
         else:
             return cls(lib_match.group(1), "", lib_match.group(2))
@@ -548,8 +558,6 @@ class SharedLibrary:
         return "%s (%s)" % (self.name, self.arch)
 
 UNIX_SYSTEM = UnixSystem()
-#LINUX_SYSTEM = LinuxSystem()
-#BSD_SYSTEM = BSDSystem()
 
 def gather_system_info():
     """Get all system information in a single data structure"""
