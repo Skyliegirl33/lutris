@@ -130,15 +130,6 @@ def check_libs(all_components=False):
                 )
             )
 
-def check_os():
-    """Instantiates the correct singleton based on the reported OS"""
-    output = system.read_process_output(["uname", "-o"])
-
-    if "Linux" in output:
-        UNIX_SYSTEM = LinuxSystem()
-    elif "FreeBSD" in output:
-        UNIX_SYSTEM = BSDSystem()
-
 def check_vulkan():
     """Reports if Vulkan is enabled on the system"""
     if not vkquery.is_vulkan_supported():
@@ -162,7 +153,6 @@ def fill_missing_platforms():
 
 def run_all_checks():
     """Run all startup checks"""
-    check_os()
     check_driver()
     check_libs()
     check_vulkan()
