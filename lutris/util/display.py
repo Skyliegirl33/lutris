@@ -22,6 +22,7 @@ except ImportError:
 from gi.repository import Gdk, GLib, Gio, Gtk
 
 from lutris.util import system
+from lutris.util.unix import UNIX_SYSTEM, OSType
 from lutris.settings import DEFAULT_RESOLUTION_HEIGHT, DEFAULT_RESOLUTION_WIDTH
 from lutris.util.graphics.displayconfig import MutterDisplayManager
 from lutris.util.graphics.xrandr import LegacyDisplayManager, change_resolution, get_outputs
@@ -60,17 +61,34 @@ def _get_graphics_adapters():
     Returns:
         list: list of tuples containing PCI ID and description of the display controller
     """
-    lspci_path = system.find_executable("lspci")
-    dev_subclasses = ["VGA", "XGA", "3D controller", "Display controller"]
-    if not lspci_path:
-        logger.warning("lspci is not available. List of graphics cards not available")
-        return []
-    return [
-        (pci_id, device_desc.split(": ")[1]) for pci_id, device_desc in [
-            line.split(maxsplit=1) for line in system.execute(lspci_path, timeout=3).split("\n")
-            if any(subclass in line for subclass in dev_subclasses)
+    if UNIX_SYSTEM.os_type == OSType.Linux:
+        lspci_path = system.find_executable("lspci")
+        dev_subclasses = ["VGA", "XGA", "3D controller", "Display controller"]
+        if not lspci_path:
+            logger.warning("lspci is not available. List of graphics cards not available")
+            return []
+        return [
+            (pci_id, device_desc.split(": ")[1]) for pci_id, device_desc in [
+                line.split(maxsplit=1) for line in system.execute(lspci_path, timeout=3).split("\n")
+                if any(subclass in line for subclass in dev_subclasses)
+            ]
         ]
-    ]
+    elif UNIX_SYSTEM.os_type == OSType.FreeBSD:
+        pciconf_path = system.find_executable("pciconf")
+        dev_subclasses = ["VGA"]
+        if not pciconf_path:
+            logger.warning("pciconf is not available. List of graphics cards not available")
+            return []
+        output = system.read_process_output([pciconf_path, "-lv"]).split("\n")
+        devs = []
+        for idx, line in enumerate(output):
+            if "@pci" in line:
+                pci_id = line.split("@pci")[1].split(":\t")[0]
+                device_desc = output[idx + 2].split("device     = ")[1]
+                subclass_line = output[idx + 4] if len(output) > idx + 4 else ""
+                if any(subclass in subclass_line for subclass in dev_subclasses):
+                    devs.append((pci_id, device_desc))
+        return devs
 
 
 class DisplayManager:
