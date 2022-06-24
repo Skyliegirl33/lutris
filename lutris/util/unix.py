@@ -298,14 +298,14 @@ class UnixSystem:  # pylint: disable=too-many-public-methods
             return []
         pass
 
-    def get_shared_libraries(self, os):
+    def get_shared_libraries(self):
         """Loads all available libraries on the system as SharedLibrary instances
         The libraries are stored in a defaultdict keyed by library name.
         """
         shared_libraries = defaultdict(list)
         for lib_line in self.get_ldconfig_libs():
             try:
-                lib = SharedLibrary.new_from_ldconfig(lib_line, os)
+                lib = SharedLibrary.new_from_ldconfig(lib_line)
             except ValueError:
                 logger.error("Invalid ldconfig line: %s", lib_line)
                 continue
@@ -355,7 +355,7 @@ class UnixSystem:  # pylint: disable=too-many-public-methods
 class BSDSystem(UnixSystem):
     multiarch_lib_folders = [
         ("/lib", "/lib"),
-        ("/usr/local/lib", "/usr/local/lib"),
+        ("/usr/local/lib32", "/usr/local/lib"),
         ("/usr/lib32", "/usr/lib")
     ]
 
@@ -368,7 +368,7 @@ class BSDSystem(UnixSystem):
 
     def __init__(self):
         super().__init__()
-        self.shared_libraries = self.get_shared_libraries(self.os_type)
+        self.shared_libraries = self.get_shared_libraries()
         self.populate_libraries()
         self.populate_sound_fonts()
 
@@ -386,7 +386,16 @@ class BSDSystem(UnixSystem):
             key, value = cpuinfo.split(": ", 1)
 
             for cpu_index in range(ncpu):
-                cpus[cpu_index][key.strip()] = value.strip()
+                if not value.strip():
+                    continue
+
+                if key == "hw.hv_vendor":
+                    cpus[cpu_index]["vendor_id"] = value.strip()
+                elif key == "hw.model":
+                    cpus[cpu_index]["model name"] = value.strip()
+                elif key == "hw.ncpu":
+                    cpus[cpu_index]["cpu cores"] = value.strip()
+                    cpus[cpu_index]["siblings"] = value.strip()
 
         return [cpu for cpu in cpus if cpu]
 
@@ -400,7 +409,7 @@ class BSDSystem(UnixSystem):
         for line in lsblk_output.split("\n")[1:]:
             info = line.split()
 
-            if line.startswith("ada"):
+            if line.startswith("ada") or line.startswith("nvd"):
                 obj["blockdevices"].append({ "name": info[0], "fstype": info[3], "children": [] })
                 count += 1
 
@@ -417,10 +426,11 @@ class BSDSystem(UnixSystem):
     def get_ram_info():
         """Parse the output of sysctl and return RAM information in kB"""
         mem = {}
-        meminfo = system.read_process_output(["sysctl", "hw.physmem", "hw.realmem", "hw.usermem"])
-        for line in meminfo.split("\n"):
-                key, value = line.split(":", 1)
-                mem[key.strip()] = round(int(value.strip('\n')) / 1024)
+        meminfo = system.read_process_output(["sysctl", "hw.physmem"])
+        
+        key, value = meminfo.split(":", 1)
+        mem["MemTotal"] = round(int(value.strip('\n')) / 1024)
+        mem["SwapTotal"] = 0; # TODO
         return mem
 
     @staticmethod
@@ -430,12 +440,25 @@ class BSDSystem(UnixSystem):
         version = kernel_info.split(" ")[2]
         return version
 
+    def format_ldconfig(self, lines, flags):
+        """Format the ldconfig output of FreeBSD"""
+        out = []
+        for line in lines:
+            if line.startswith("\t") and not "search directories:" in line:
+                line_clean = line.strip("\t").split(":-l", 1)[1].split("=>")
+                out.append("{} ({}) =>{}".format(os.path.basename(line_clean[1]), flags, line_clean[1]))
+        return out
+
     def get_ldconfig_libs(self):
         """Return a list of available libraries, as returned by `ldconfig -r`."""
         super().get_ldconfig_libs()
-        output = system.read_process_output(["ldconfig", "-32 -r"]).split("\n")
-        out = ["lib" + line.strip("\t").split(":-l", 1)[1] for line in output if line.startswith("\t") and not "search directories:" in line]
-        print(out)
+
+        output = system.read_process_output(["ldconfig", "-r"]).split("\n")
+        out = self.format_ldconfig(output, "x86-64" if self.is_64_bit else "libc")
+
+        if self.is_64_bit:
+            out += self.format_ldconfig(system.read_process_output(["ldconfig", "-32", "-r"]).split("\n"), "libc")
+
         return out
 
 class LinuxSystem(UnixSystem):
@@ -457,7 +480,7 @@ class LinuxSystem(UnixSystem):
 
     def __init__(self):
         super().__init__()
-        self.shared_libraries = self.get_shared_libraries(self.os_type)
+        self.shared_libraries = self.get_shared_libraries()
         self.populate_libraries()
         self.populate_sound_fonts()
 
@@ -522,18 +545,12 @@ class SharedLibrary:
         self.path = path
 
     @classmethod
-    def new_from_ldconfig(cls, ldconfig_line, os):
+    def new_from_ldconfig(cls, ldconfig_line):
         """Create a SharedLibrary instance from an output line from ldconfig"""
-        if os == OSType.Linux:
-            lib_match = re.match(r"^(.*) \((.*)\) => (.*)$", ldconfig_line)
-        else:
-            lib_match = re.match(r"^(.*) => (.*)$", ldconfig_line)
+        lib_match = re.match(r"^(.*) \((.*)\) => (.*)$", ldconfig_line)
         if not lib_match:
             raise ValueError("Received incorrect value for ldconfig line: %s" % ldconfig_line)
-        if os == OSType.Linux:
-            return cls(lib_match.group(1), lib_match.group(2), lib_match.group(3))
-        else:
-            return cls(lib_match.group(1), "", lib_match.group(2))
+        return cls(lib_match.group(1), lib_match.group(2), lib_match.group(3))
 
     @property
     def arch(self):
