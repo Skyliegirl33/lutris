@@ -260,8 +260,8 @@ def get_wine_version(wine_path="wine"):
         return
     if os.path.isabs(wine_path):
         wine_stats = os.stat(wine_path)
-        if wine_stats.st_size < 2000:
-            # This version is a script, ignore it
+        if wine_stats.st_size < 2000 and unix.UNIX_OS == "Linux":
+            # This version is a script, ignore it on Linux
             return
     version = system.read_process_output([wine_path, "--version"])
     if not version:
