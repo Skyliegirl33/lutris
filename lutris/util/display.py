@@ -23,7 +23,7 @@ except ImportError:
 from gi.repository import Gdk, GLib, Gio, Gtk
 
 from lutris.util import system
-from lutris.util.unix import UNIX_SYSTEM, OSType
+from lutris.util.unix import UNIX_OS
 from lutris.settings import DEFAULT_RESOLUTION_HEIGHT, DEFAULT_RESOLUTION_WIDTH
 from lutris.util.graphics.displayconfig import MutterDisplayManager
 from lutris.util.graphics.xrandr import LegacyDisplayManager, change_resolution, get_outputs
@@ -62,7 +62,7 @@ def _get_graphics_adapters():
     Returns:
         list: list of tuples containing PCI ID and description of the display controller
     """
-    if UNIX_SYSTEM.os_type == OSType.Linux:
+    if UNIX_OS == "Linux":
         lspci_path = system.find_executable("lspci")
         dev_subclasses = ["VGA", "XGA", "3D controller", "Display controller"]
         if not lspci_path:
@@ -74,7 +74,7 @@ def _get_graphics_adapters():
                 if any(subclass in line for subclass in dev_subclasses)
             ]
         ]
-    elif UNIX_SYSTEM.os_type == OSType.FreeBSD:
+    elif UNIX_OS == "FreeBSD":
         pciconf_path = system.find_executable("pciconf")
         dev_subclasses = ["VGA"]
         if not pciconf_path:

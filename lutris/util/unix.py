@@ -7,7 +7,6 @@ import resource
 import shutil
 import sys
 from collections import Counter, defaultdict
-from enum import Enum
 
 from lutris.util import system
 from lutris.util.graphics import drivers, glxinfo, vkquery
@@ -83,7 +82,7 @@ SYSTEM_COMPONENTS = {
     },
 }
 
-OSType = Enum("OSType", "Linux FreeBSD")
+UNIX_OS = platform.system()
 
 class UnixSystem:  # pylint: disable=too-many-public-methods
     """Global cache for system commands"""
@@ -97,8 +96,6 @@ class UnixSystem:  # pylint: disable=too-many-public-methods
     recommended_no_file_open = 524288
     required_components = ["OPENGL", "VULKAN", "GNUTLS"]
     optional_components = ["WINE", "GAMEMODE"]
-
-    os_type = None
 
     def __init__(self):
         for key in ("COMMANDS", "TERMINALS"):
@@ -364,8 +361,6 @@ class BSDSystem(UnixSystem):
         "/usr/local/share/soundfonts",
     ]
 
-    os_type = OSType.FreeBSD
-
     def __init__(self):
         super().__init__()
         self.shared_libraries = self.get_shared_libraries()
@@ -377,7 +372,7 @@ class BSDSystem(UnixSystem):
         """Parse the output of sysctl hw"""
         ncpu = int(system.read_process_output(["sysctl", "hw.ncpu"]).split(":", 1)[1])
         cpus = [{} for n in range(ncpu)]
-        output = system.read_process_output(["sysctl", "hw"])
+        output = system.read_process_output(["sysctl", "hw.hv_vendor", "hw.model"])
 
         for cpuinfo in output.split("\n"):
             if cpuinfo.strip() == "":
@@ -393,9 +388,9 @@ class BSDSystem(UnixSystem):
                     cpus[cpu_index]["vendor_id"] = value.strip()
                 elif key == "hw.model":
                     cpus[cpu_index]["model name"] = value.strip()
-                elif key == "hw.ncpu":
-                    cpus[cpu_index]["cpu cores"] = value.strip()
-                    cpus[cpu_index]["siblings"] = value.strip()
+
+        cpus[cpu_index]["cpu cores"] = ncpu
+        cpus[cpu_index]["siblings"] = ncpu
 
         return [cpu for cpu in cpus if cpu]
 
@@ -475,8 +470,6 @@ class LinuxSystem(UnixSystem):
         "/usr/share/sounds/sf2",
         "/usr/share/soundfonts",
     ]
-
-    os_type = OSType.Linux
 
     def __init__(self):
         super().__init__()
