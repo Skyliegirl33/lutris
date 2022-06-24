@@ -12,6 +12,7 @@ from lutris.runners.commands.wine import (  # noqa: F401 pylint: disable=unused-
 )
 from lutris.runners.runner import Runner
 from lutris.util import system
+from lutris.util.unix import UNIX_OS
 from lutris.util.display import DISPLAY_MANAGER, get_default_dpi
 from lutris.util.graphics.vkquery import is_vulkan_supported
 from lutris.util.jobs import thread_safe_call
@@ -40,6 +41,9 @@ class wine(Runner):
     platforms = [_("Windows")]
     multiple_versions = True
     entry_point_option = "exe"
+
+    if UNIX_OS != "Linux":
+        system_options_override = [{"option": "disable_runtime", "default": True}] # Disable runtime if OS isn't Linux
 
     game_options = [
         {
@@ -114,6 +118,7 @@ class wine(Runner):
                 "winehq-devel": _("WineHQ Devel ({})"),
                 "winehq-staging": _("WineHQ Staging ({})"),
                 "wine-development": _("Wine Development ({})"),
+                "wine-proton": _("Wine Proton ({})"),
                 "system": _("System ({})"),
             }
             versions = get_wine_versions()
