@@ -15,6 +15,7 @@ from ctypes.util import find_library
 
 from lutris.util.log import logger
 from lutris.util.process_watcher import ProcessWatcher
+from lutris.util.unix import UNIX_OS
 
 try:
     from setproctitle import setproctitle
@@ -22,6 +23,7 @@ except ImportError:
     setproctitle = print
 
 
+PROC_REAP_ACQUIRE = 2 # Value of the constant in procctl.h
 PR_SET_CHILD_SUBREAPER = 36  # Value of the constant in prctl.h
 
 
@@ -54,10 +56,14 @@ def set_child_subreaper():
     Some init(1) frameworks (e.g., systemd(1)) employ a subreaper
     process for similar reasons.
     """
-    result = ctypes.CDLL(find_library('c')).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0, 0)
-    if result == -1:
-        print("PR_SET_CHILD_SUBREAPER is not supported by your kernel (Linux 3.4 and above)")
-
+    if UNIX_OS == "Linux":
+        result = ctypes.CDLL(find_library('c')).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0, 0)
+        if result == -1:
+            print("PR_SET_CHILD_SUBREAPER is not supported by your kernel (Linux 3.4 and above)")
+    elif UNIX_OS == "FreeBSD":
+        result = ctypes.CDLL(find_library('c')).procctl(0, 0, PROC_REAP_ACQUIRE, 0)
+        if result == -1:
+            print("PROC_REAP_ACQUIRE is not supported by your kernel.")
 
 def log(log_message):
     """Generic log function that can be adjusted for any log output method
@@ -71,8 +77,8 @@ def log(log_message):
         pass
 
     # File output
-    # with open(os.path.expanduser("~/lutris.log"), "a") as logfile:
-    #     logfile.write(line)
+    #with open(os.path.expanduser("~/lutris.log"), "a") as logfile:
+    #    logfile.write(line)
 
 
 def kill_pid(pid, sigkill=False):
