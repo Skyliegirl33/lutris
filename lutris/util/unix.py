@@ -372,7 +372,7 @@ class BSDSystem(UnixSystem):
         """Parse the output of sysctl hw"""
         ncpu = int(system.read_process_output(["sysctl", "hw.ncpu"]).split(":", 1)[1])
         cpus = [{} for n in range(ncpu)]
-        output = system.read_process_output(["sysctl", "hw.hv_vendor", "hw.model"])
+        output = system.read_process_output(["sysctl", "hw.hv_vendor", "hw.model", "hw.ncpu"])
 
         for cpuinfo in output.split("\n"):
             if cpuinfo.strip() == "":
@@ -388,9 +388,9 @@ class BSDSystem(UnixSystem):
                     cpus[cpu_index]["vendor_id"] = value.strip()
                 elif key == "hw.model":
                     cpus[cpu_index]["model name"] = value.strip()
-
-        cpus[cpu_index]["cpu cores"] = ncpu
-        cpus[cpu_index]["siblings"] = ncpu
+                elif key == "hw.ncpu":
+                    cpus[cpu_index]["cpu cores"] = value.strip()
+                    cpus[cpu_index]["siblings"] = value.strip()
 
         return [cpu for cpu in cpus if cpu]
 
