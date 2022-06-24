@@ -407,8 +407,7 @@ class BSDSystem(UnixSystem):
             if line.startswith("ada") or line.startswith("nvd"):
                 obj["blockdevices"].append({ "name": info[0], "fstype": info[3], "children": [] })
                 count += 1
-
-            if line.startswith("  ") and info[0] != "<FREE>":
+            elif info[0] != "<FREE>":
                 obj["blockdevices"][count - 1]["children"].append({ "name": info[0], "fstype": info[3], "label": info[4], "mount": info[5] })
 
         return [
