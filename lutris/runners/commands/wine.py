@@ -256,6 +256,9 @@ def wineexec(  # noqa: C901
         if os.path.isfile(executable):
             working_dir = os.path.dirname(executable)
 
+    if is_64_bit_pe(executable):
+        wine_path = wine_path + "64"
+
     executable, _args, working_dir = get_real_executable(executable, working_dir)
     if _args:
         args = '{} "{}"'.format(_args[0], _args[1])
@@ -413,3 +416,6 @@ def open_wine_terminal(terminal, wine_path, prefix, env):
     shell_command = get_shell_command(prefix, env, aliases)
     terminal = terminal or unix.get_default_terminal()
     system.execute([terminal, "-e", shell_command])
+
+def is_64_bit_pe(exe):
+    return 'x86-64' in system.read_process_output(["file", exe])
