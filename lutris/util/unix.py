@@ -430,28 +430,22 @@ class BSDSystem(UnixSystem):
     @staticmethod
     def get_kernel_version():
         """Get kernel info from uname"""
-        kernel_info = system.read_process_output(["uname", "-a"])
-        version = kernel_info.split(" ")[2]
-        return version
+        kernel_version = system.read_process_output(["uname", "-r"])
+        return kernel_version
 
     def format_ldconfig(self, lines, flags):
         """Format the ldconfig output of FreeBSD"""
-        out = []
-        for line in lines:
-            if line.startswith("\t") and not "search directories:" in line:
-                line_clean = line.strip("\t").split(":-l", 1)[1].split("=>")
-                out.append("{} ({}) =>{}".format(os.path.basename(line_clean[1]), flags, line_clean[1]))
-        return out
+        return ["{} ({}) => {}".format(os.path.basename(l[1]), flags, l[1]) for line in lines if line.startswith("\t") and (l := line.strip("\t").split("=> "))]
 
     def get_ldconfig_libs(self):
         """Return a list of available libraries, as returned by `ldconfig -r`."""
         super().get_ldconfig_libs()
 
-        output = system.read_process_output(["ldconfig", "-r"]).split("\n")
+        output = system.read_process_output(["ldconfig", "-r"]).split("\n")[2:]
         out = self.format_ldconfig(output, "x86-64" if self.is_64_bit else "libc")
 
         if self.is_64_bit:
-            out += self.format_ldconfig(system.read_process_output(["ldconfig", "-32", "-r"]).split("\n"), "libc")
+            out += self.format_ldconfig(system.read_process_output(["ldconfig", "-32", "-r"]).split("\n")[2:], "libc")
 
         return out
 
