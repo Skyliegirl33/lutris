@@ -8,7 +8,7 @@ from lutris import runtime, settings
 from lutris.gui.dialogs import FileDialog
 from lutris.runners.commands.wine import (  # noqa: F401 pylint: disable=unused-import
     create_prefix, delete_registry_key, eject_disc, install_cab_component, open_wine_terminal, set_regedit,
-    set_regedit_file, winecfg, wineexec, winekill, winetricks, is_64_bit_pe
+    set_regedit_file, winecfg, wineexec, winekill, winetricks
 )
 from lutris.runners.runner import Runner
 from lutris.util import system
@@ -990,9 +990,6 @@ class wine(Runner):
                     return {"error": "NON_FSYNC_WINE_VERSION"}
 
         command = [self.get_executable()]
-
-        if is_64_bit_pe(game_exe):
-            command[0] = command[0] + "64"
 
         game_exe, args, _working_dir = get_real_executable(game_exe, self.working_dir)
         command.append(game_exe)

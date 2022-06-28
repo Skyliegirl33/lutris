@@ -256,9 +256,6 @@ def wineexec(  # noqa: C901
         if os.path.isfile(executable):
             working_dir = os.path.dirname(executable)
 
-    if is_64_bit_pe(executable):
-        wine_path = wine_path + "64"
-
     executable, _args, working_dir = get_real_executable(executable, working_dir)
     if _args:
         args = '{} "{}"'.format(_args[0], _args[1])
