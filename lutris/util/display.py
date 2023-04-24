@@ -85,7 +85,8 @@ def _get_graphics_adapters():
         for idx, line in enumerate(output):
             if "@pci" in line:
                 pci_id = line.split("@pci")[1].split(":\t")[0]
-                device_desc = output[idx + 2].split("device     = ")[1]
+                device = output[idx + 2].split("device     = ") if len(output) > idx + 2 else []
+                device_desc = device[1] if len(device) > 1 else ""
                 subclass_line = output[idx + 4] if len(output) > idx + 4 else ""
                 if any(subclass in subclass_line for subclass in dev_subclasses):
                     devs.append((pci_id, device_desc))
